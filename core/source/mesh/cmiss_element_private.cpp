@@ -202,6 +202,9 @@ public:
 			case CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX:
 				fe_basis_type = QUADRATIC_SIMPLEX;
 				break;
+			case CMISS_BASIS_FUNCTION_CUBIC_HERMITE:
+				fe_basis_type = CUBIC_HERMITE;
+				break;
 			default:
 				fe_basis_type = FE_BASIS_TYPE_INVALID;
 				break;
@@ -302,6 +305,9 @@ public:
 					number_of_nodes *= 3;
 					break;
 				case CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE:
+					number_of_nodes *= 4;
+					break;
+				case CMISS_BASIS_FUNCTION_CUBIC_HERMITE:
 					number_of_nodes *= 4;
 					break;
 				case CMISS_BASIS_FUNCTION_LINEAR_SIMPLEX:
@@ -1560,6 +1566,9 @@ public:
 				break;
 			case CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX:
 				enum_string = "QUADRATIC_SIMPLEX";
+				break;
+			case CMISS_BASIS_FUNCTION_CUBIC_HERMITE:
+				enum_string = "CUBIC_HERMITE";
 				break;
 			default:
 				break;
