@@ -85,7 +85,8 @@ enum Cmiss_basis_function_type
 	CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE = 3,
 	CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE = 4,
 	CMISS_BASIS_FUNCTION_LINEAR_SIMPLEX = 5,   /**< linked on 2 or more dimensions */
-	CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX = 6 /**< linked on 2 or more dimensions */
+	CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX = 6, /**< linked on 2 or more dimensions */
+        CMISS_BASIS_FUNCTION_CUBIC_HERMITE = 7,
 };
 
 /*

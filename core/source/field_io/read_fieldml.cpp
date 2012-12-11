@@ -107,12 +107,14 @@ const BasisType libraryBases[] =
 	{ 1, "interpolator.1d.unit.linearLagrange",      true, { CMISS_BASIS_FUNCTION_LINEAR_LAGRANGE, CMISS_BASIS_FUNCTION_TYPE_INVALID, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
 	{ 1, "interpolator.1d.unit.quadraticLagrange",   true, { CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE, CMISS_BASIS_FUNCTION_TYPE_INVALID, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
 	{ 1, "interpolator.1d.unit.cubicLagrange",       true, { CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE, CMISS_BASIS_FUNCTION_TYPE_INVALID, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
+        { 1, "interpolator.1d.unit.cubicHermite",        true, { CMISS_BASIS_FUNCTION_CUBIC_HERMITE, CMISS_BASIS_FUNCTION_TYPE_INVALID, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0},
 	{ 2, "interpolator.2d.unit.bilinearLagrange",    true, { CMISS_BASIS_FUNCTION_LINEAR_LAGRANGE, CMISS_BASIS_FUNCTION_LINEAR_LAGRANGE, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
 	{ 2, "interpolator.2d.unit.biquadraticLagrange", true, { CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE, CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
 	{ 2, "interpolator.2d.unit.bicubicLagrange",     true, { CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE, CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
 	{ 2, "interpolator.2d.unit.bilinearSimplex",     true, { CMISS_BASIS_FUNCTION_LINEAR_SIMPLEX, CMISS_BASIS_FUNCTION_LINEAR_SIMPLEX, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
 	{ 2, "interpolator.2d.unit.biquadraticSimplex",  true, { CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0 },
 	{ 2, "interpolator.2d.unit.biquadraticSimplex.vtk",  true, { CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_TYPE_INVALID }, biquadraticSimplex_vtk_swizzle },
+        { 2, "interpolator.2d.unit.bicubicHermite",      true, { CMISS_BASIS_FUNCTION_CUBIC_HERMITE, CMISS_BASIS_FUNCTION_CUBIC_HERMITE, CMISS_BASIS_FUNCTION_TYPE_INVALID }, 0},
 	{ 3, "interpolator.3d.unit.trilinearLagrange",   true, { CMISS_BASIS_FUNCTION_LINEAR_LAGRANGE, CMISS_BASIS_FUNCTION_LINEAR_LAGRANGE, CMISS_BASIS_FUNCTION_LINEAR_LAGRANGE }, 0 },
 	{ 3, "interpolator.3d.unit.triquadraticLagrange",true, { CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE, CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE, CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE }, 0 },
 	{ 3, "interpolator.3d.unit.tricubicLagrange",    true, { CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE, CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE, CMISS_BASIS_FUNCTION_CUBIC_LAGRANGE }, 0 },
@@ -121,7 +123,7 @@ const BasisType libraryBases[] =
 	{ 3, "interpolator.3d.unit.triquadraticSimplex.zienkiewicz", true, { CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX }, triquadraticSimplex_zienkiewicz_swizzle },
 	{ 3, "interpolator.3d.unit.trilinearWedge12",    false,{ CMISS_BASIS_FUNCTION_LINEAR_SIMPLEX, CMISS_BASIS_FUNCTION_LINEAR_SIMPLEX, CMISS_BASIS_FUNCTION_LINEAR_LAGRANGE }, 0 },
 	{ 3, "interpolator.3d.unit.triquadraticWedge12", false,{ CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_QUADRATIC_SIMPLEX, CMISS_BASIS_FUNCTION_QUADRATIC_LAGRANGE }, 0 },
-	// GRC add Hermite!
+        { 3, "interpolator.3d.unit.tricubicHermite",      true, { CMISS_BASIS_FUNCTION_CUBIC_HERMITE, CMISS_BASIS_FUNCTION_CUBIC_HERMITE, CMISS_BASIS_FUNCTION_CUBIC_HERMITE }, 0},
 	// GRC add vtk, zienkiewicz simplex ordering, swizzle
 };
 
@@ -1443,6 +1445,8 @@ FieldMLReader::handleDirectNodeParameters
  Cmiss_field_id field
 )
 {
+  int componentCount = fmlComponentEvaluators.size();
+
   for (std::vector<FmlObjectHandle>::const_iterator i = fmlComponentEvaluators.begin();
        i != fmlComponentEvaluators.end(); i++)
   {
@@ -1467,7 +1471,7 @@ FieldMLReader::handleDirectNodeParameters
       return 0;
     }
     std::string interpName = getDeclaredName(interpExtEval);
-    std::string expectParamArg;
+    std::string expectParamArg, expectAggregateIndex, toNode, toDeriv;
     int expectDim;
 
     bool hasDerivative = false;
@@ -1475,63 +1479,81 @@ FieldMLReader::handleDirectNodeParameters
     {
       expectDim = 1;
       expectParamArg = "parameters.1d.unit.linearLagrange.argument";
+      expectAggregateIndex = "parameters.1d.unit.linearLagrange.comonent.argument";
     }
     else if (interpName == "interpolator.1d.unit.quadraticLagrange")
     {
       expectDim = 1;
       expectParamArg = "parameters.1d.unit.quadraticLagrange.argument";
+      expectAggregateIndex = "parameters.1d.unit.quadraticLagrange.component.argument";
     }
     else if (interpName == "interpolator.1d.unit.cubicLagrange")
     {
       expectDim = 1;
       expectParamArg = "parameters.1d.unit.cubicLagrange.argument";
+      expectAggregateIndex = "parameters.1d.unit.cubicLagrange.component.argument";
     }
     else if (interpName == "interpolator.2d.unit.bilinearLagrange")
     {
       expectDim = 2;
       expectParamArg = "parameters.2d.unit.bilinearLagrange.argument";
+      expectAggregateIndex = "parameters.2d.unit.bilinearLagrange.component.argument";
     }
     else if (interpName == "interpolator.2d.unit.biquadraticLagrange")
     {
       expectDim = 2;
       expectParamArg = "parameters.2d.unit.biquadraticLagrange.argument";
+      expectAggregateIndex = "parameters.2d.unit.biquadraticLagrange.component.argument";
     }
     else if (interpName == "interpolator.2d.unit.bicubicLagrange")
     {
       expectDim = 2;
       expectParamArg = "parameters.2d.unit.bicubicLagrange.argument";
+      expectAggregateIndex = "parameters.2d.unit.bicubicLagrange.component.argument";
     }
     else if (interpName == "interpolator.3d.unit.trilinearLagrange")
     {
       expectDim = 3;
       expectParamArg = "parameters.3d.unit.trilinearLagrange.argument";
+      expectAggregateIndex = "parameters.3d.unit.trilinearLagrange.component.argument";
     }
     else if (interpName == "interpolator.3d.unit.triquadraticLagrange")
     {
       expectDim = 3;
       expectParamArg = "parameters.3d.unit.triquadraticLagrange.argument";
+      expectAggregateIndex = "parameters.3d.unit.triquadraticLagrange.component.argument";
     }
     else if (interpName == "interpolator.3d.unit.tricubicLagrange")
     {
       expectDim = 3;
       expectParamArg = "parameters.3d.unit.tricubicLagrange.argument";
+      expectAggregateIndex = "parameters.3d.unit.tricubicLagrange.component.argument";
     }
     else if (interpName == "interpolator.1d.unit.cubicHermite")
     {
       expectDim = 1;
       expectParamArg = "parameters.1d.unit.cubicHermite.argument";
+      expectAggregateIndex = "parameters.1d.unit.cubicHermite.component.argument";
+      toNode = "parameters.1d.unit.cubicHermite.component.toNode";
+      toDeriv = "parameters.1d.unit.cubicHermite.component.toDerivative";
       hasDerivative = true;
     }
     else if (interpName == "interpolator.2d.unit.bicubicHermite")
     {
       expectDim = 2;
       expectParamArg = "parameters.2d.unit.bicubicHermite.argument";
+      expectAggregateIndex = "parameters.2d.unit.bicubicHermite.component.argument";
+      toNode = "parameters.2d.unit.bicubicHermite.component.toNode";
+      toDeriv = "parameters.2d.unit.bicubicHermite.component.toDerivative";
       hasDerivative = true;
     }
     else if (interpName == "interpolator.3d.unit.tricubicHermite")
     {
       expectDim = 3;
-      expectParamArg = "parameters.1d.unit.tricubicHermite.argument";
+      expectParamArg = "parameters.3d.unit.tricubicHermite.argument";
+      expectAggregateIndex = "parameters.3d.unit.tricubicHermite.component.argument";
+      toNode = "parameters.3d.unit.tricubicHermite.component.toNode";
+      toDeriv = "parameters.3d.unit.tricubicHermite.component.toDerivative";
       hasDerivative = true;
     }
     else
@@ -1559,7 +1581,7 @@ FieldMLReader::handleDirectNodeParameters
     FmlObjectHandle bindArg2 = Fieldml_GetBindArgument(fmlSession, fmlComponentEvaluator, 2);
     FmlObjectHandle aggOverInterpParams, interpBindArg, chartArgEval, chartArgArg;
 
-    std::string arg1Actual(getName(bindArg1));
+    std::string arg1Actual(getDeclaredName(bindArg1));
 
     if (arg1Actual == expectParamArg)
     {
@@ -1577,7 +1599,7 @@ FieldMLReader::handleDirectNodeParameters
     }
 
     // Sanity check: are they actually binding the right argument for the interpolator?
-    std::string interpBindArgActual(getName(interpBindArg));
+    std::string interpBindArgActual(getDeclaredName(interpBindArg));
     if (interpBindArgActual != expectParamArg)
     {
       std::string evaluatorName(getName(fmlComponentEvaluator));
@@ -1618,9 +1640,207 @@ FieldMLReader::handleDirectNodeParameters
                       evaluatorNameI.c_str(), evaluatorNameA.c_str());
       return 0;
     }
+
+    FmlObjectHandle indexEval = Fieldml_GetIndexEvaluator(fmlSession, aggOverInterpParams, 1);
+    if (indexEval == FML_INVALID_OBJECT_HANDLE)
+    {
+      std::string evaluatorNameA(getName(aggOverInterpParams));
+      display_message(ERROR_MESSAGE, "Read FieldML: Aggregate evaluator %s, which is expected to be over the component ensemble of the interpolator parameters, does not have an index evaluator as expected.", evaluatorNameA.c_str());
+      return 0;
+    }
+    if (Fieldml_GetObjectType(fmlSession, indexEval) != FHT_ARGUMENT_EVALUATOR)
+    {
+      std::string evaluatorNameArg(getName(indexEval));
+      std::string evaluatorNameAgg(getName(aggOverInterpParams));
+      display_message(ERROR_MESSAGE, "Read FieldML: Evaluator %s, which is expected to be the index evaluator for the aggregate evaluator %s over the component ensemble of the interpolator parameters, is not an argument evaluator as expected.",
+                      evaluatorNameArg.c_str(), evaluatorNameAgg.c_str());
+      return 0;
+    }
+
+    if (getDeclaredName(indexEval) != expectAggregateIndex)
+    {
+      std::string evaluatorNameArg(getName(indexEval));
+      std::string evaluatorNameAgg(getName(aggOverInterpParams));
+      display_message(ERROR_MESSAGE, "Read FieldML: Argument evaluator %s is index of aggregate %s, but an argument evaluator referencing %s was expected",
+                      evaluatorNameArg.c_str(), evaluatorNameAgg.c_str(), expectAggregateIndex.c_str());
+      return 0;
+    }
+
+    int return_code = 1;
+    if (hasDerivative)
+    {
+      if (Fieldml_GetBindCount(fmlSession, aggOverInterpParams) != 2)
+      {
+        std::string evaluatorNameAgg(getName(aggOverInterpParams));
+        display_message(ERROR_MESSAGE, "Read FieldML: Expected aggregate evaluator %s (which aggregates interpolator parameters) to bind two arguments, one for the node and one for the derivative.",
+                        evaluatorNameAgg.c_str());
+        return 0;
+      }
+
+      FmlObjectHandle nodeArg, derivArg;
+
+      FmlObjectHandle arg1 = Fieldml_GetBindArgument(fmlSession, aggOverInterpParams, 1);
+      FmlObjectHandle arg2 = Fieldml_GetBindArgument(fmlSession, aggOverInterpParams, 2);
+      FmlObjectHandle eval1 = Fieldml_GetBindEvaluator(fmlSession, aggOverInterpParams, 1);
+      FmlObjectHandle eval2 = Fieldml_GetBindEvaluator(fmlSession, aggOverInterpParams, 2);
+      if (getDeclaredName(eval1) == toNode)
+      {
+        nodeArg = arg1;
+        derivArg = arg2;
+      }
+      else if (getDeclaredName(eval2) == toNode)
+      {
+        nodeArg = arg2;
+        derivArg = arg1;
+        eval2 = eval1;
+      }
+      else
+      {
+        std::string evaluatorNameAgg(getName(aggOverInterpParams));
+        display_message(ERROR_MESSAGE, "Read FieldML: Expected aggregate evaluator %s (which aggregates interpolator parameters) to bind an argument to %s so the node is known.",
+                        evaluatorNameAgg.c_str(), toNode.c_str());
+        return 0;
+      }
+
+      if (getDeclaredName(eval2) != toDeriv)
+      {
+        std::string evaluatorNameAgg(getName(aggOverInterpParams));
+        display_message(ERROR_MESSAGE, "Read FieldML: Expected aggregate evaluator %s (which aggregates interpolator parameters) to bind an argument to %s so the derivative is known.",
+                        evaluatorNameAgg.c_str(), toDeriv.c_str());
+        return 0;
+      }
+
+      FmlObjectHandle interpParamEval = Fieldml_GetDefaultEvaluator(fmlSession, aggOverInterpParams);
+      if (Fieldml_GetObjectType(fmlSession, interpParamEval) != FHT_PARAMETER_EVALUATOR)
+      {
+        std::string evaluatorNameAgg(getName(aggOverInterpParams));
+        std::string evaluatorNameParam(getName(interpParamEval));
+        display_message(ERROR_MESSAGE, "Read FieldML: Expected default evaluator of aggregate evaluator %s, namely %s, to be a parameter evaluator containing the parameter values.",
+                        evaluatorNameAgg.c_str(), evaluatorNameParam.c_str());
+        return 0;
+      }
+      if (Fieldml_GetBindCount(fmlSession, interpParamEval) != 1)
+      {
+        std::string evaluatorNameParam(getName(interpParamEval));
+        display_message(ERROR_MESSAGE, "Read FieldML: Expected interpolation parameter evaluator %s to bind an argument for the local to global map.",
+                        evaluatorNameParam.c_str());
+        return 0;
+      }
+
+      FmlObjectHandle globalNodeArg = Fieldml_GetBindArgument(fmlSession, interpParamEval, 1);
+      FmlObjectHandle localToGlobalMap = Fieldml_GetBindEvaluator(fmlSession, interpParamEval, 1);
+      if (Fieldml_GetObjectType(fmlSession, localToGlobalMap) != FHT_PARAMETER_EVALUATOR)
+      {
+        std::string evaluatorNameL2G(getName(localToGlobalMap));
+        display_message(ERROR_MESSAGE, "Read FieldML: Expected %s, the argument bound to an interpolation parameter value parameter evaluator, to also be a parameter value (for the local-to-global node map)", evaluatorNameL2G.c_str());
+        return 0;
+      }
+
+      Cmiss_nodeset_id nodes;
+      if (!createNodes(Fieldml_GetValueType(fmlSession, globalNodeArg), nodes))
+        return 0;
+
+      Cmiss_field_id node_parameters_field = getParameters(fmlNodeParameters);
+      Cmiss_field_real_parameters_id node_parameters = Cmiss_field_cast_real_parameters(node_parameters_field);
+      Cmiss_field_destroy(&node_parameters_field);
+
+      if (!node_parameters)
+      {
+        display_message(ERROR_MESSAGE,
+                        "Read FieldML: Field %s nodal parameters %s unable to be read.",
+                        getName(interpParamEval).c_str(), getName(fmlNodeParameters).c_str());
+        return_code = 0;
+      }
+      else
+      {
+        // All nodes 
+        Cmiss_node_template_id node_template = Cmiss_nodeset_create_node_template(nodes);
+        Cmiss_node_template_define_field(node_template, field);
+
+        Cmiss_ensemble_index_id index = Cmiss_field_real_parameters_create_index(node_parameters);
+
+        // GRC inefficient to iterate over sparse parameters this way
+        Cmiss_ensemble_iterator_id nodesIterator = Cmiss_field_ensemble_get_first_entry(nodesEnsemble);
+        double *values = new double[componentCount];
+        int *valueExists = new int[componentCount];
+        Cmiss_field_cache_id field_cache = Cmiss_field_module_create_cache(field_module);
+        while (return_code)
+        {
+          Cmiss_ensemble_identifier nodeIdentifier = Cmiss_ensemble_iterator_get_identifier(nodesIterator);
+          Cmiss_node_id node = Cmiss_nodeset_find_node_by_identifier(nodes, nodeIdentifier);
+          Cmiss_ensemble_index_set_entry(index, nodesIterator);
+          int valuesRead = 0;
+          if (Cmiss_field_real_parameters_get_values_sparse
+              (node_parameters, index, componentCount, values, valueExists, &valuesRead))
+          {
+            if (0 < valuesRead)
+            {
+              // A limitation of cmgui is that all nodal component values must be set if any are set.
+              // Set the dummy values to zero.
+              if (valuesRead < componentCount)
+              {
+                for (int i = 0; i < componentCount; i++)
+                {
+                  if (!valueExists[i])
+                    values[i] = 0.0;
+                }
+              }
+              Cmiss_node_merge(node, node_template);
+              Cmiss_field_cache_set_node(field_cache, node);
+              Cmiss_field_assign_real(field, field_cache, componentCount * 2, values);
+            }
+          }
+          else
+          {
+            return_code = 0;
+          }
+          Cmiss_node_destroy(&node);
+          if (!Cmiss_ensemble_iterator_increment(nodesIterator))
+            break;
+        }
+        Cmiss_field_cache_destroy(&field_cache);
+        delete[] valueExists;
+        delete[] values;
+        Cmiss_ensemble_iterator_destroy(&nodesIterator);
+        Cmiss_field_real_parameters_destroy(&node_parameters);
+        Cmiss_ensemble_index_destroy(&index);
+        Cmiss_node_template_destroy(&node_template);
+      }
+
+      Cmiss_nodeset_destroy(&nodes);
+    }
+    else
+    {
+      
+    }
   }
 
-  return 1;
+  return return_code;
+}
+
+int FieldMLReader::createNodes(FmlObjectHandle fmlNodeEnsembleType, Cmiss_nodeset_id& nodes)
+{
+  nodes = Cmiss_field_module_find_nodeset_by_name(field_module, "cmiss_nodes");
+  Cmiss_field_ensemble_id nodesEnsemble = getEnsemble(fmlNodeEnsembleType);
+  if (fmlNodesType == FML_INVALID_OBJECT_HANDLE)
+  {
+    fmlNodesType = fmlNodeEnsembleType;
+    // create the nodes
+    Cmiss_node_template_id node_template = Cmiss_nodeset_create_node_template(nodes);
+    Cmiss_ensemble_iterator_id nodesIterator = Cmiss_field_ensemble_get_first_entry(nodesEnsemble);
+    while (return_code)
+    {
+      Cmiss_ensemble_identifier nodeIdentifier = Cmiss_ensemble_iterator_get_identifier(nodesIterator);
+      Cmiss_node_id node = Cmiss_nodeset_create_node(nodes, nodeIdentifier, node_template);
+      Cmiss_node_destroy(&node);
+      if (!Cmiss_ensemble_iterator_increment(nodesIterator))
+        break;
+    }
+    Cmiss_ensemble_iterator_destroy(&nodesIterator);
+    Cmiss_node_template_destroy(&node_template);
+  }
+  
+  Cmiss_field_ensemble_destroy(&nodesEnsemble);
 }
 
 int FieldMLReader::readField(FmlObjectHandle fmlFieldEvaluator,
@@ -1656,30 +1876,13 @@ int FieldMLReader::readField(FmlObjectHandle fmlFieldEvaluator,
 		Cmiss_field_set_attribute_integer(field, CMISS_FIELD_ATTRIBUTE_IS_COORDINATE, 1);
 	}
 
-        if (fmlNodeEnsembleType == FML_INVALID_OBJECT_HANDLE)
+	if (fmlNodeEnsembleType == FML_INVALID_OBJECT_HANDLE)
 		return_code = handleDirectNodeParameters(fmlComponentEvaluators, field);
-        else
-        {
+	else
+	{
 		// create nodes and set node parameters
-		Cmiss_nodeset_id nodes = Cmiss_field_module_find_nodeset_by_name(field_module, "cmiss_nodes");
-		Cmiss_field_ensemble_id nodesEnsemble = getEnsemble(fmlNodeEnsembleType);
-		if (fmlNodesType == FML_INVALID_OBJECT_HANDLE)
-		{
-			fmlNodesType = fmlNodeEnsembleType;
-			// create the nodes
-			Cmiss_node_template_id node_template = Cmiss_nodeset_create_node_template(nodes);
-			Cmiss_ensemble_iterator_id nodesIterator = Cmiss_field_ensemble_get_first_entry(nodesEnsemble);
-			while (return_code)
-			{
-				Cmiss_ensemble_identifier nodeIdentifier = Cmiss_ensemble_iterator_get_identifier(nodesIterator);
-				Cmiss_node_id node = Cmiss_nodeset_create_node(nodes, nodeIdentifier, node_template);
-				Cmiss_node_destroy(&node);
-				if (!Cmiss_ensemble_iterator_increment(nodesIterator))
-					break;
-			}
-			Cmiss_ensemble_iterator_destroy(&nodesIterator);
-			Cmiss_node_template_destroy(&node_template);
-		}
+		Cmiss_nodeset_id nodes;
+		createNodes(fmlNodeEnsembleType, nodes);
 
 		Cmiss_field_id node_parameters_field = getParameters(fmlNodeParameters);
 		Cmiss_field_real_parameters_id node_parameters = Cmiss_field_cast_real_parameters(node_parameters_field);
